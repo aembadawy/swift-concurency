@@ -12,11 +12,35 @@ struct User: Identifiable {
     var email: String
     var id = UUID().uuidString
 }
+
+class ConcurrencyService {
+    
+    func fetchUsersAsync() async -> [User] {
+        let users: [User] = [
+            User(name: "Alice Smith", email: "alice@example.com"),
+            User(name: "Bob Johnson", email: "bob@example.com"),
+            User(name: "Charlie Davis", email: "charlie@example.com")
+        ]
+        return users
+    }
+    
+    func fetchUsersCompletion(completion: @escaping([User]) -> Void) {
+        let users: [User] = [
+            User(name: "Alice Smith", email: "alice@example.com"),
+            User(name: "Bob Johnson", email: "bob@example.com"),
+            User(name: "Charlie Davis", email: "charlie@example.com")
+        ]
+        completion(users)
+    }
+}
+
 class AsyncAwaitViewModel: ObservableObject {
     
     @Published var users = [User]()
     @Published var isLoading = false
     @Published var isUpdating = false
+    
+    let service = ConcurrencyService()
     
     init() {
         Task {
@@ -27,13 +51,17 @@ class AsyncAwaitViewModel: ObservableObject {
     func fetchUsers() async {
         isLoading = true
         try? await Task.sleep(nanoseconds: 3_000_000_000)
-        let users: [User] = [
-            User(name: "Alice Smith", email: "alice@example.com"),
-            User(name: "Bob Johnson", email: "bob@example.com"),
-            User(name: "Charlie Davis", email: "charlie@example.com")
-        ]
+        let users = await service.fetchUsersAsync()
         isLoading = false
         self.users = users
+    }
+    
+    func fetchUsersCompletion() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.service.fetchUsersCompletion { [weak self] users in
+                self?.users = users
+            }
+        }
     }
     
     func updateUsersEmails() async {
