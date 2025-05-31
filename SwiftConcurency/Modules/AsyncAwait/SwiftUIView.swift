@@ -70,7 +70,7 @@ class AsyncAwaitViewModel: ObservableObject {
         try? await Task.sleep(nanoseconds: 3_000_000_000)
         for user in users {
             let newEmail = user.email.replacingOccurrences(of: "example",
-                                                           with: "hey")
+                                                           with: "gmail")
             let newUser = User(name: user.name, email: newEmail)
             updatedUsers.append(newUser)
         }
@@ -108,6 +108,11 @@ struct SwiftUIView: View {
                     await viewModel.updateUsersEmails()
                 }
             }
+            .frame(width: 310, height: 48)
+            .background(.blue)
+            .foregroundStyle(.white)
+            .cornerRadius(12)
+            .padding()
         }
     }
 }
