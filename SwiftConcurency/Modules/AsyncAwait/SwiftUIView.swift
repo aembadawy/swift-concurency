@@ -15,7 +15,7 @@ struct User: Identifiable {
 
 class ConcurrencyService {
     
-    func fetchUsersAsync() async -> [User] {
+    func fetchUsersAsync() async throws -> [User] {
         let users: [User] = [
             User(name: "Alice Smith", email: "alice@example.com"),
             User(name: "Bob Johnson", email: "bob@example.com"),
@@ -50,10 +50,15 @@ class AsyncAwaitViewModel: ObservableObject {
     
     func fetchUsers() async {
         isLoading = true
-        try? await Task.sleep(nanoseconds: 3_000_000_000)
-        let users = await service.fetchUsersAsync()
-        isLoading = false
-        self.users = users
+        defer { isLoading = false }
+        do {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            let users = try await service.fetchUsersAsync()
+            isLoading = false
+            self.users = users
+        } catch {
+            print("Error \(error.localizedDescription)")
+        }
     }
     
     func fetchUsersCompletion() {
