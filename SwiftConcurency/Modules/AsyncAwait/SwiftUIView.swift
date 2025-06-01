@@ -16,21 +16,39 @@ struct User: Identifiable {
 class ConcurrencyService {
     
     func fetchUsersAsync() async throws -> [User] {
+        
+        try await Task.sleep(nanoseconds: 3_000_000_000)
+        
         let users: [User] = [
             User(name: "Alice Smith", email: "alice@example.com"),
             User(name: "Bob Johnson", email: "bob@example.com"),
             User(name: "Charlie Davis", email: "charlie@example.com")
         ]
-        return users
+        let error = Bool.random() // Simulate error in API
+        
+        if error {
+            throw URLError(.badServerResponse)
+        } else {
+            return users
+        }
     }
     
-    func fetchUsersCompletion(completion: @escaping([User]) -> Void) {
+    func fetchUsersCompletion(completion: @escaping(Result<[User], Error>) -> Void) {
+        
         let users: [User] = [
             User(name: "Alice Smith", email: "alice@example.com"),
             User(name: "Bob Johnson", email: "bob@example.com"),
             User(name: "Charlie Davis", email: "charlie@example.com")
         ]
-        completion(users)
+        
+        let error = Bool.random() // Simulate that an error occured
+        if error {
+            completion(.failure(URLError(.badServerResponse)))
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                completion(.success(users))
+            }
+        }
     }
 }
 
@@ -44,17 +62,17 @@ class AsyncAwaitViewModel: ObservableObject {
     
     init() {
         Task {
-            await fetchUsers()
+            await fetchUsers() // using async
         }
+        
+        fetchUsersCompletion() // using CH
     }
     
     func fetchUsers() async {
         isLoading = true
         defer { isLoading = false }
         do {
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
             let users = try await service.fetchUsersAsync()
-            isLoading = false
             self.users = users
         } catch {
             print("Error \(error.localizedDescription)")
@@ -62,9 +80,12 @@ class AsyncAwaitViewModel: ObservableObject {
     }
     
     func fetchUsersCompletion() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.service.fetchUsersCompletion { [weak self] users in
+        self.service.fetchUsersCompletion { [weak self] result in
+            switch result {
+            case .success(let users):
                 self?.users = users
+            case .failure(let error):
+                print("Error \(error.localizedDescription)")
             }
         }
     }
